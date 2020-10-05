@@ -1,10 +1,10 @@
-var svgWidth = 960;
+var svgWidth = 1000;
 var svgHeight = 500;
 var margin ={
     top: 20,
     right: 40,
     bottom: 80,
-    left: 50
+    left: 60
 };
 
 var height = svgHeight - margin.top - margin.bottom;
@@ -32,20 +32,6 @@ function get_Y_Scale(Data, chosenYAxis){
     return yScale;
 };
 
-function renderAxes(newXScale, xAxis){
-    var bottomAxis = d3.axisBottom(newXScale);
-    xAxis.transition()
-    .duration(1000)
-    .call(bottomAxis);
-    return xAxis;
-};
-
-function renderCircles(circlesGroup,newXScale, chosenXAxis){
-    circlesGroup.transition()
-    .duration(1000)
-    .attr("cx", d=> newXScale(d[chosenXAxis]));
-    return circlesGroup;
-}
 
 d3.csv("assets/data/data.csv").then(function(Data, err){
     if (err) throw err;
@@ -57,12 +43,6 @@ d3.csv("assets/data/data.csv").then(function(Data, err){
         data.age = +data.age;
     });
 
-    // var xScale = d3.scaleLinear()
-    // .domain([d3.min(Data, d=>d.poverty)-1,d3.max(Data, d=>d.poverty)+1])
-    // .range([0, width]);
-    // var yScale = d3.scaleLinear()
-    // .domain([d3.min(Data, d=>d.healthcare)-1,d3.max(Data, d=>d.healthcare)+1])
-    // .range([height,0]);
     var chosenXAxis = "poverty";
     var chosenYAxis = "healthcare";
     var xScale = get_X_Scale(Data, chosenXAxis);
@@ -76,59 +56,48 @@ d3.csv("assets/data/data.csv").then(function(Data, err){
         .attr("transform",`translate(0,${height})`)
         .call(bottomAxis);
     
-    chartGroup.append("g")
+    var yAxis = chartGroup.append("g")
         .call(leftAxis);
 
     var circlesGroup = chartGroup.selectAll("circle")
         .data(Data)
         .enter()
         .append("circle")
-        .attr("cx", d=> xScale(d.poverty))
-        .attr("cy", d=> yScale(d.healthcare))
-        .attr("r",10)
+        .attr("cx", d=> xScale(d[chosenXAxis]))
+        .attr("cy", d=> yScale(d[chosenYAxis]))
+        .attr("r",15)
         .attr("fill","purple")
-        .attr("opacity",".5");
+        .attr("opacity",".9");
 
     //label
-    var labelsGroup = chartGroup.append("g")
+    var x_labelsGroup = chartGroup.append("g")
     .attr("transform", `translate(${width / 2}, ${height + 20})`);
-    var poverLabel = labelsGroup.append("text")
+    var poverLabel = x_labelsGroup.append("text")
     .attr("x", 0)
     .attr("y", 20)
-    .attr("value", "poverty") // value to grab for event listener
-    .classed("active", true)
+    .attr("value", "poverty")
+    .classed("xaxis active", true)
     .text("In Poverty (%)");
-    var ageLabel = labelsGroup.append("text")
-    .attr("x", 0)
-    .attr("y", 40)
-    .attr("value", "age") // value to grab for event listener
-    .classed("inactive", true)
-    .text("Age (median)");
+    
     chartGroup.append("text")
     .attr("transform", "rotate(-90)")
     .attr("y", 0 - margin.left)
     .attr("x", 0 - ((height + margin.bottom) / 2))
     .attr("dy", "1em")
-    .classed("axis-text", true)
+    .attr("value", "healthcare")
+    .classed("yaxis active", true)
     .text("Lacks Healthcare (%)");
+    chartGroup.selectAll("#circle_text")
+    .data(Data)
+    .enter()
+    .append("text")
+    .classed("circle_text", true)
+    .text(d=>d.abbr)
+    .attr("dx", d=> xScale(d[chosenXAxis])-5)
+    .attr("dy", d=> yScale(d[chosenYAxis])+5)
+    .style("fill", "white")
+    .style("font-size","10px");
 
-    labelsGroup.selectAll("text").on("click",function(){
-        var value = d3.select(this).attr("value");
-        if (value !== chosenXAxis){
-            chosenXAxis = value;
-            xScale = get_X_Scale(Data, chosenXAxis);
-            xAxis = renderAxes(xScale, xAxis);
-            circlesGroup = renderCircles(circlesGroup, xScale, chosenXAxis);
-            if (chosenXAxis === "age"){
-                poverLabel.classed("active",false).classed("inactive",true);
-                ageLabel.classed("active",true).classed("inactive",false);
-            }
-            else{
-                ageLabel.classed("active",false).classed("inactive",true);
-                poverLabel.classed("active",true).classed("inactive",false);
-            }
-        }
-    });
     
 
 }).catch(function(error){
